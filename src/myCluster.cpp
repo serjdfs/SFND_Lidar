@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <vector>
-#include <math.h>
+#include <cmath>
 
 // Structure to represent node of kd tree
 struct Node

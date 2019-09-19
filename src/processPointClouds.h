@@ -20,12 +20,13 @@
 #include <ctime>
 #include <chrono>
 #include "render/box.h"
-//#include "myCluster.cpp"
 #include <unordered_set>
 
 template<typename PointT>
 class ProcessPointClouds {
 public:
+
+    //std::vector<std::vector<PointT>> myEuclideanCluster(const std::vector<PointT>& points, myKdTree<PointT>* tree, float distanceTol);
 
     //constructor
     ProcessPointClouds();

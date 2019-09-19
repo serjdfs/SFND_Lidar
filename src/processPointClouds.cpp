@@ -3,6 +3,126 @@
 #include "processPointClouds.h"
 
 
+// Structure to represent node of kd tree
+template<typename PointT>
+struct Node
+{
+    PointT point;
+    int id;
+    Node* left;
+    Node* right;
+
+    Node(PointT arr, int setId)
+            :	point(arr), id(setId), left(NULL), right(NULL)
+    {}
+};
+
+template<typename PointT>
+struct myKdTree
+{
+    Node<PointT>* root;
+
+    myKdTree()
+            : root(NULL)
+    {}
+
+    void insertHelper(Node<PointT>** node, uint depth, PointT point, int id)
+    {
+        //Tree is empty
+        if (*node == NULL)
+            *node = new Node<PointT>(point, id);
+        else
+        {
+            //calculate current dimension; we get 0s and 1s
+            uint cd = depth % 2;
+
+            if (point[cd] < ((*node)->point[cd]))
+                insertHelper(&((*node)->left),depth+1, point, id);
+            else
+                insertHelper(&((*node)->right),depth+1, point, id);
+        }
+
+    }
+
+    void insert(PointT point, int id)
+    {
+        // TODO: Fill in this function to insert a new point into the tree
+        // the function should create a new node and place correctly with in the root
+
+        insertHelper(&root, 0, point, id);
+    }
+
+    void searchHelper(PointT target, Node<PointT>* node, int depth, float distanceTol, std::vector<int>& ids)
+    {
+        if(node!=NULL)
+        {
+            if( (node->point[0]>=(target[0]-distanceTol)&&node->point[0]<=(target[0]+distanceTol))
+                && (node->point[1]>=(target[1]-distanceTol)&&node->point[1]<=(target[1]+distanceTol)))
+            {
+                float distance = std::sqrt((node->point[0]-target[0])*(node->point[0]-target[0])+(node->point[1]-target[1])*(node->point[1]-target[1]));
+                if (distance <= distanceTol)
+                    ids.push_back(node->id);
+            }
+
+            // check accross boundary
+            if((target[depth%2]-distanceTol)<node->point[depth%2])
+                searchHelper(target, node->left, depth+1, distanceTol, ids);
+            if((target[depth%2]+distanceTol)>node->point[depth%2])
+                searchHelper(target, node->right, depth+1, distanceTol, ids);
+
+        }
+    }
+
+    // return a list of point ids in the tree that are within distance of target
+    std::vector<int> search(PointT target, float distanceTol)
+    {
+        std::vector<int> ids;
+        searchHelper(target, root, 0, distanceTol, ids);
+
+        return ids;
+    }
+};
+
+
+template<typename PointT>
+void clusterHelper2(int indice, const std::vector<PointT> points, std::vector<int>& cluster, std::vector<bool>& processed, myKdTree<PointT>* tree, float distanceTol)
+{
+    processed[indice] = true;
+    cluster.push_back(indice);
+
+    std::vector<int> nearest = tree->search(points[indice],distanceTol);
+
+    for(int id: nearest)
+    {
+        if(!processed[id])
+            clusterHelper2(id, points, cluster, processed, tree, distanceTol);
+    }
+};
+
+template<typename PointT>
+std::vector<std::vector<PointT>> myEuclideanCluster(const std::vector<PointT>& points, myKdTree<PointT>* tree, float distanceTol)
+{
+
+    // TODO: Fill out this function to return list of indices for each cluster
+
+    std::vector<std::vector<PointT>> clusters;
+
+    std::vector<bool> processed(points.size(), false);
+
+    int i = 0;
+    while (i < points.size()) {
+        if (processed[i]) {
+            i++;
+            continue;
+        }
+        std::vector<int> cluster;
+        clusterHelper2(i, points, cluster, processed, tree, distanceTol);
+        clusters.push_back(cluster);
+        i++;
+    }
+    return clusters;
+};
+
 //constructor:
 template<typename PointT>
 ProcessPointClouds<PointT>::ProcessPointClouds() {}
@@ -149,9 +269,9 @@ pcl::PointIndices::Ptr ProcessPointClouds<PointT>::Ransac(typename pcl::PointClo
 			float y4 = point.y;
 			float z4 = point.z;
 
-			float d = fabs(a*x4 + b*y4 + c*z4 + d)/sqrt(a*a+b*b+c*c);
+			float dist = fabs(a*x4 + b*y4 + c*z4 + d)/sqrt(a*a+b*b+c*c);
 
-			if (d <= distanceTol)
+			if (dist <= distanceTol)
             {
                 inliers.insert(index);
             }
@@ -180,7 +300,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     //pcl::PointIndices::Ptr inliers {new pcl::PointIndices};
     
     // obtaining the indices from the surface
-	pcl::PointIndices::Ptr inliers = Ransac(cloud, 50, 0.2);
+	pcl::PointIndices::Ptr inliers = Ransac(cloud, 35, 0.2);
 
 	/*
     // TODO:: Fill in this function to find inliers for the cloud.
@@ -218,12 +338,14 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 
     // Time clustering process
     auto startTime = std::chrono::steady_clock::now();
-	// clusters is the vector of point clouds
-    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
 
     // TODO:: Fill in the function to perform euclidean clustering to group detected obstacles
 
 	std::vector<pcl::PointIndices> clusterIndices;
+
+
+	// clusters is the vector of point clouds
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
 
 	//Creating the Kd-Tree object for the search method extraction
 	typename pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT>);
@@ -237,7 +359,7 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 	ec.setInputCloud(cloud);
 	ec.extract(clusterIndices);
 
-	for(pcl::PointIndices getIndices: clusterIndices){
+    for(pcl::PointIndices getIndices: clusterIndices){
 		typename pcl::PointCloud<PointT>::Ptr cloudCluster (new pcl::PointCloud<PointT>);
 
 		for(int index: getIndices.indices)
@@ -250,7 +372,26 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
 		clusters.push_back(cloudCluster);
 
 	}
+    /*
+    // own cluster
+    myKdTree<PointT>* tree = new myKdTree<PointT>;
 
+    for (int idx=0; idx < cloud->points.size(); idx++)
+        tree->insert(cloud->points[idx],idx);
+
+    std::vector<std::vector<PointT>> clustersIdx = myEuclideanCluster(cloud->points, tree, 3.0);
+    // vector with clusters
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
+
+    for(int idx=0; idx < clustersIdx.size(); idx++)
+    {
+        typename pcl::PointCloud<PointT>::Ptr small_cloud;
+        for(PointT point:clustersIdx[idx])
+        {
+            small_cloud->points.insert(point);
+        }
+        clusters[idx] = small_cloud;
+    }*/
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
