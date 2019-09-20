@@ -113,9 +113,9 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointCloud
     //std::cout << "obst " << std::to_string (segmentCloud.first->points.size()) << std::endl;
     //std::cout << "plane " << std::to_string (segmentCloud.second->points.size()) << std::endl;
 
-    /*
+
     //Clustering Points into objects
-    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters = pointProcessorI->Clustering(segmentCloud.first, 0.5, 15, 600);
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloudClusters = pointProcessorI->Clustering(segmentCloud.first, 0.2, 15, 400);
 
     int clusterId = 0;
     std::vector<Color> colors = {Color(1,0,0),Color(1,1,0),Color(0,0,1)};
@@ -132,7 +132,7 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointCloud
         renderBox(viewer, box, clusterId);
 
         ++clusterId;
-    }*/
+    }
 }
 
 
