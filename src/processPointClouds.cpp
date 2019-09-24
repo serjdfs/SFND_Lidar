@@ -319,7 +319,7 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
     for (int idx=0; idx < obstCloud->points.size(); idx++)
         tree->insert(obstCloud->points[idx],idx);
 
-    std::vector<std::vector<PointT>> clusters_p = myEuclideanCluster(obstCloud, tree, 3.0);
+    std::vector<std::vector<PointT>> clusters_p = myEuclideanCluster(obstCloud, tree, clusterTolerance);
 
     for(int idx=0; idx < clusters_p.size(); idx++)
     {
