@@ -180,7 +180,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     //pcl::PointIndices::Ptr inliers {new pcl::PointIndices};
     
     // obtaining the indices from the surface
-	pcl::PointIndices::Ptr inliers = Ransac(cloud, 35, 0.2);
+	pcl::PointIndices::Ptr inliers = Ransac(cloud, maxIterations, distanceThreshold);
 
 	/*
     // TODO:: Fill in this function to find inliers for the cloud.
